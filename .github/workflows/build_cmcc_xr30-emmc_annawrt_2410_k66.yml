@@ -77,15 +77,15 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Before freeing up disk space (ディスクスペースを解放する前に)
+    - name: Pre-Free Disk Space (ディスク解放前の準備)
       run: |
-        echo "ディスクスペースを解放する前に"
+        echo "ディスク解放前の準備"
         echo "=============================================================================="
         df -hT
         echo "=============================================================================="
 
-    - name: "Optimize Disk Space (ディスクスペースの最適化)"
-      uses: "hugoalh/disk-space-optimizer-ghaction@v0.8.1"
+    - name: Optimize Disk Space (ディスク容量の最適化)
+      uses: hugoalh/disk-space-optimizer-ghaction@v0.8.1
       with:
         operate_sudo: "True"
         general_include: ".+"
@@ -105,7 +105,7 @@ jobs:
         npm_clean: "True"
         os_swap: "True"
 
-    - name: Freeing up disk space (ハードドライブの空き容量を増やす)
+    - name: Free Disk Space (ディスク空き容量の確保)
       uses: easimon/maximize-build-space@master
       with: 
         root-reserve-mb: 8192
@@ -116,10 +116,10 @@ jobs:
         remove-codeql: 'true'
         remove-docker-images: 'true'
 
-    - name: Check Server Performance (サーバーのパフォーマンスを確認する)
+    - name: Check Server Performance (サーバー性能の確認)
       run: |
-        echo "⚠️警告する⚠️"
-        echo "割り当てられたサーバーのパフォーマンスには制限があります。プラグインを選択しすぎる場合は、CPU パフォーマンスに注意してください。"
+        echo "⚠️注意⚠️"
+        echo "サーバーのリソースは有限です。プラグインの過剰な選択はCPU高負荷の原因となります。"
         echo -e "既知のCPUモデル（降順）: 7763，8370C，8272CL，8171M，E5-2673\n"
         echo "-------------------------CPU 情報---------------------------"
         echo "CPUの物理数  : $(cat /proc/cpuinfo | grep "physical id" | sort | uniq | wc -l)"
@@ -129,9 +129,9 @@ jobs:
         echo "メモリの詳細:"
         echo -e "$(sudo lshw -short -C memory | grep GiB)\n"
         echo "---------------------ハードディスク情報---------------------"
-        echo "ハードディスク容量: $(ls /dev/sd* | grep -v [1-9] | wc -l)" && df -hT
+        echo "ディスク容量: $(ls /dev/sd* | grep -v [1-9] | wc -l)" && df -hT
 
-    - name: Initialization environment (初期化環境)
+    - name: Initialize Environment (環境の初期化)
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
@@ -148,11 +148,11 @@ jobs:
         sudo timedatectl set-timezone "$TZ"
         sudo chown $USER:$GROUPS $GITHUB_WORKSPACE
 
-    - name: Setup Git Credentials
+    - name: Setup Git Credentials (Git認証情報の設定)
       run: |
         git config --global url."https://$ACCESS_TOKEN@github.com/0xACE8/".insteadOf "https://github.com/0xACE8/"
         
-    - name: Clone source code (ソースコードのクローン)
+    - name: Clone Source Code (ソースコードのクローン)
       working-directory: ./
       run: |
         df -hT $PWD
@@ -163,25 +163,25 @@ jobs:
         ${{ secrets.ADD_EXTRA_SOURCE }}
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
 
-        # Remove All China download sources (中国からのダウンロードソースを削除する)
+        # Remove China Mirrors (中国国内ミラーの削除)
         PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
         if [ -f "$PROJECT_MIRRORS_FILE" ]; then
           sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
         fi
 
-    - name: Generate Variables (変数を生成する)
+    - name: Generate Variables (環境変数の生成)
       run: |
         SOURCE_REPO="$(echo $PONLY2410_K66_REPO_LINK | awk -F '/' '{print $(NF)}')"
         echo "SOURCE_REPO=$SOURCE_REPO" >> $GITHUB_ENV
 
-    - name: Cache Toolchain (キャッシュツールチェーン)
+    - name: Cache Toolchain (ツールチェーンのキャッシュ)
       uses: HiGarfield/cachewrtbuild@main
       with:
         ccache: true
         mixkey: MT7981b-${{ env.SOURCE_CODE }}-${{ env.SOURCE_REPO }}-${{ env.KERNEL_VERS }}-${{ secrets.PONLY2410_K66_REPO_BRANCH }}
         prefix: ${{ env.OPENWRT_PATH }}
 
-    - name: Updata & install feeds (アップデートとフィードのインストール)
+    - name: Update & Install Feeds (フィードの更新とインストール)
       working-directory: ./openwrt
       run: |
         ./scripts/feeds update -a
@@ -190,31 +190,30 @@ jobs:
         ./scripts/feeds install -a
         ./scripts/feeds install -a
 
-    - name: Load custom configuration (カスタム構成を読み込む)
+    - name: Load Custom Configuration (カスタム設定の読み込み)
       working-directory: ./openwrt
+      id: loadconfig
       run: |
         ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_PROFILE }}
-        echo "load config done."
         ${{ secrets.PONLY2410_K66_REPO_DIFF }}
-        echo "load repo patch done."
         ${{ secrets.ARGON_THEME_CMCC }}
-        echo "load theme done."
 
-    - name: Restore configuration archive (バックアップした構成アーカイブを復元する)
-      if: (github.event.inputs.restore_config == 'true' && github.event.inputs.restore_config != 'false') || contains(github.event.action, 'restore_config') && !cancelled()
+    - name: Restore Config Archive (設定アーカイブの復元)
+      if: steps.loadconfig.outcome == 'success' && (github.event.inputs.restore_config == 'true' || contains(github.event.action, 'restore_config')) && !cancelled()
       working-directory: ./openwrt
       run: |
         rm -rf files
         ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_ARCHIVE }}
-        echo "load config backup done."
         echo "OUTPUT_FILE=annawrt-24.10-k6.6-ace-mt7981b-cmcc_xr30-emmc-configured-sysupgrade" >> $GITHUB_ENV
 
-    - name: Boost Wi-Fi 5G signal to 25dbm (Wi-Fi 5G信号を25dbmまでブースト)
+    - name: Boost Wi-Fi 5G Signal (Wi-Fi 5G信号の増幅)
+      if: steps.loadconfig.outcome == 'success' && !cancelled()
       working-directory: ./openwrt
       run: |
         ${{ secrets.BOOST_5G_TO_25DBM }}
 
-    - name: Download package (パッケージをダウンロード)
+    - name: Download Packages (パッケージのダウンロード)
+      if: steps.loadconfig.outcome == 'success' && !cancelled()
       working-directory: ./openwrt
       id: package
       run: |
@@ -223,34 +222,33 @@ jobs:
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
 
-    - name: Compile the firmware (ファームウェアをコンパイルする)
+    - name: Compile Firmware (ファームウェアのコンパイル)
       working-directory: ./openwrt
       id: compile
       run: |
         echo -e "$(nproc) thread compile"
-        make -j$(nproc) || make -j1 || make -j1 V=s
-        echo "status=success" >> $GITHUB_OUTPUT
+        make -j$(($(nproc) + 1)) || make -j1 V=s
         echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
 
-    - name: Upgrading variables (変数のアップグレード)
+    - name: Update Variables (変数の更新)
       run: |
         echo "OUTPUT_FILE=${OUTPUT_FILE}_${FILE_DATE}" >> $GITHUB_ENV
 
-    - name: View Disk Usage (ディスク使用量の表示)
+    - name: Check Disk Usage (ディスク使用量の確認)
       if: (!cancelled())
       run: df -hT
 
-    - name: Telegram notify when compilation error (コンパイルエラーが発生したときにテレグラムを使用して通知する)
-      if: steps.compile.outputs.status != 'success' && (github.event.inputs.telegram_notify == 'true' && github.event.inputs.telegram_notify != 'false') || contains(github.event.action, 'telegram_notify') && !cancelled()
+    - name: Notify Compilation Error (コンパイルエラーの通知)
+      if: steps.compile.outcom != 'success' && (github.event.inputs.telegram_notify == 'true' || contains(github.event.action, 'telegram_notify')) && !cancelled()
       env:
         to: ${{ secrets.TELEGRAM_CHAT_ID }}
         token: ${{ secrets.TELEGRAM_BOT_KEY }}
       run: |
         curl -s -o /dev/null -X GET "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_KEY }}/sendMessage?chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&text=❌%20コンパイルに失敗しました！%20❌%0A%0A＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝%0A・🛜支援デバイス:%0A　%20　${{ env.DEVICE_NAME }}%0Aーーーーーーーーーーーーーーーーー%0A・💽フラッシュは:%0A　%20　${{ env.TARGET_DISK }}%0Aーーーーーーーーーーーーーーーーー%0A・🧿カーネル使用:%0A　%20　${{ env.KERNEL_VERS }}%0Aーーーーーーーーーーーーーーーーー%0A・📝ソースコード:%0A　%20　${{ env.SOURCE_CODE }}%0Aーーーーーーーーーーーーーーーーー%0A・📦リポジトリを:%0A　%20　${{ env.SOURCE_REPO }}%0Aーーーーーーーーーーーーーーーーー%0A・🔀ブランチ名前:%0A　%20　${{ secrets.PONLY2410_K66_REPO_TREE }}%0Aーーーーーーーーーーーーーーーーー%0A・❌エラーの時間:%0A　%20　$(date +'%Y年%m月%d日_%H時%M分')%0A＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝%0A"
 
-    - name: Organize files (ファイルを整理する)
+    - name: Organize Files (ファイルの整理)
       id: organize
-      if: steps.compile.outputs.status == 'success' && !cancelled()
+      if: steps.compile.outcom == 'success' && !cancelled()
       run: |
         cd openwrt/bin/targets/*/*
         ls | grep -v *sysupgrade.bin | xargs rm -rdf
@@ -258,27 +256,26 @@ jobs:
         sha512sums ${{ secrets.ACCESS_SHA512SUM }} sha512sums ${{ env.OUTPUT_FILE }}.bin
         ${{ secrets.ACCESS_REPACKAGE }} ${{ env.OUTPUT_FILE }}.bin
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
-        echo "status=success" >> $GITHUB_OUTPUT
 
-    - name: Upload Firmware To Artifact (Artifactにアップロードする)
-      if: steps.compile.outputs.status == 'success' && steps.organize.outputs.status == 'success' && (github.event.inputs.upload_firmware == 'true' && github.event.inputs.upload_firmware  != 'false') || contains(github.event.action, 'upload_firmware') && !cancelled()
+    - name: Upload to Artifacts (Artifactに保存)
+      if: steps.organize.outcom == 'success' && (github.event.inputs.upload_firmware == 'true' || contains(github.event.action, 'upload_firmware')) && !cancelled()
       uses: actions/upload-artifact@main
       with:
         name: ${{ env.OUTPUT_FILE }}
         path: ${{ env.FIRMWARE }}
 
-    - name: Telegram notify when compilation complete (コンパイルが成功したらテレグラムを使用して通知する)
-      if: steps.compile.outputs.status == 'success' && steps.organize.outputs.status == 'success' && (github.event.inputs.telegram_notify == 'true' && github.event.inputs.telegram_notify != 'false') || contains(github.event.action, 'telegram_notify') && !cancelled()
+    - name: Notify Compilation Success (コンパイル成功の通知)
+      if: steps.organize.outcom == 'success' && (github.event.inputs.telegram_notify == 'true' || contains(github.event.action, 'telegram_notify')) && !cancelled()
       run: |
         curl -s -o /dev/null -X GET "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_KEY }}/sendMessage?chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&text=✅%20コンパイルが成功しました！%20✅%0A%0A＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝%0A・🛜支援デバイス:%0A　%20　${{ env.DEVICE_NAME }}%0Aーーーーーーーーーーーーーーーーー%0A・💽フラッシュは:%0A　%20　${{ env.TARGET_DISK }}%0Aーーーーーーーーーーーーーーーーー%0A・🧿カーネル使用:%0A　%20　${{ env.KERNEL_VERS }}%0Aーーーーーーーーーーーーーーーーー%0A・📝ソースコード:%0A　%20　${{ env.SOURCE_CODE }}%0Aーーーーーーーーーーーーーーーーー%0A・📦リポジトリを:%0A　%20　${{ env.SOURCE_REPO }}%0Aーーーーーーーーーーーーーーーーー%0A・🔀ブランチ名前:%0A　%20　${{ secrets.PONLY2410_K66_REPO_TREE }}%0Aーーーーーーーーーーーーーーーーー%0A・📁ファイル名前:%0A　%20　${{ env.OUTPUT_FILE}}%0A＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝%0A"
 
-    - name: Generate Release Tag (タグを生成する)
+    - name: Generate Release Tag (リリースタグの生成)
       run: |
         RELEASE_TAG="$TARGET_CHIP-$DEVICE_NAME-$TARGET_DISK-$KERNEL_VERS-$FILE_DATE"
         echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
 
-    - name: Upload Firmware To Release (ファームウェアをアップロードする)
-      if: steps.compile.outputs.status == 'success' && steps.organize.outputs.status == 'success' && (github.event.inputs.upload_release == 'true' && github.event.inputs.upload_release  != 'false') || contains(github.event.action, 'upload_release') && !cancelled()
+    - name: Upload to Release (Releaseに公開)
+      if: steps.organize.outcom == 'success' && (github.event.inputs.upload_release == 'true' || contains(github.event.action, 'upload_release')) && !cancelled()
       uses: ncipollo/release-action@v1
       with:
         name: ${{ env.TARGET_CHIP }}_${{ env.DEVICE_NAME }}_${{ env.TARGET_DISK }}_${{ env.KERNEL_VERS }}_${{ env.FILE_DATE }}
@@ -301,15 +298,15 @@ jobs:
           - ‼️現在のリポジトリによってコンパイルされたファームウェアはすべて非公開でカスタマイズされています。
           - ⛔️強制フラッシュ⛔️によってデバイスが損傷した場合、このリポジトリはデバイスの損傷について一切責任を負いません。
 
-    - name: Delete old workflow runs (古いワークフロー実行を削除する)
+    - name: Delete Old Workflows (古いワークフローの削除)
       uses: Mattraks/delete-workflow-runs@main
       with:
         token: ${{ secrets.ACCESS_TOKEN }}
         repository: ${{ github.repository }}
-        retain_days: 7
+        retain_days: 6
         keep_minimum_runs: 2
 
-    - name: Delete Old Releases (古いリリースを削除する)
+    - name: Delete Old Releases (古いリリースの削除)
       uses: dev-drprasad/delete-older-releases@master
       with:
         keep_latest: 2
