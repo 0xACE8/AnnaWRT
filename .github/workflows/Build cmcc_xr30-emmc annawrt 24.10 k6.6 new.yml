@@ -302,13 +302,13 @@ jobs:
       run: df -hT
 
     - name: Notify Compilation Error (コンパイルエラーの通知)
-      if: steps.compile.outcom != 'success' && (github.event.inputs.telegram_notify == 'true' || contains(github.event.action, 'telegram_notify')) && !cancelled()
+      if: steps.compile.outcome != 'success' && (github.event.inputs.telegram_notify == 'true' || contains(github.event.action, 'telegram_notify')) && !cancelled()
       run: |
         curl -s -o /dev/null -X GET "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_KEY }}/sendMessage?chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&text=❌%20コンパイルに失敗しました！%20❌%0A%0A＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝%0A・🖥️対応機種:%0A　%20　${{ env.DEVICE_NAME }}%0Aーーーーーーーーーーーーーーーーー%0A・💿容量仕様:%0A　%20　${{ env.TARGET_DISK }}%0Aーーーーーーーーーーーーーーーーー%0A・🐧カーネル:%0A　%20　${{ env.KERNEL_VERS }}%0Aーーーーーーーーーーーーーーーーー%0A・👤ソース名:%0A　%20　${{ env.SOURCE_CODE }}%0Aーーーーーーーーーーーーーーーーー%0A・🌲ソース元:%0A　%20　${{ secrets.PONLY2410_K66_REPO_TREE }}%0Aーーーーーーーーーーーーーーーーー%0A・🌿ブランチ:%0A　%20　${{ secrets.PONLY2410_K66_REPO_HEAD }}%0Aーーーーーーーーーーーーーーーーー%0A・❌エラーの時間:%0A　%20　$(date +'%Y年%m月%d日_%H時%M分')%0A＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝%0A"
 
     - name: Organize Files (ファイルの整理)
       id: organize
-      if: steps.compile.outcom == 'success' && !cancelled()
+      if: steps.compile.outcome == 'success' && !cancelled()
       run: |
         cd openwrt/bin/targets/*/*
         ls | grep -v *sysupgrade.bin | xargs rm -rdf
@@ -318,14 +318,14 @@ jobs:
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
 
     - name: Upload to Artifacts (Artifactに保存)
-      if: steps.organize.outcom == 'success' && (github.event.inputs.upload_firmware == 'true' || contains(github.event.action, 'upload_firmware')) && !cancelled()
+      if: steps.organize.outcome == 'success' && (github.event.inputs.upload_firmware == 'true' || contains(github.event.action, 'upload_firmware')) && !cancelled()
       uses: actions/upload-artifact@main
       with:
         name: ${{ env.OUTPUT_FILE }}
         path: ${{ env.FIRMWARE }}
 
     - name: Notify Compilation Success (コンパイル成功の通知)
-      if: steps.organize.outcom == 'success' && (github.event.inputs.telegram_notify == 'true' || contains(github.event.action, 'telegram_notify')) && !cancelled()
+      if: steps.organize.outcome == 'success' && (github.event.inputs.telegram_notify == 'true' || contains(github.event.action, 'telegram_notify')) && !cancelled()
       run: |
         curl -s -o /dev/null -X GET "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_KEY }}/sendMessage?chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&text=✅%20コンパイルが成功しました！%20✅%0A%0A＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝%0A・🖥️対応機種:%0A　%20　${{ env.DEVICE_NAME }}%0Aーーーーーーーーーーーーーーーーー%0A・💿容量仕様:%0A　%20　${{ env.TARGET_DISK }}%0Aーーーーーーーーーーーーーーーーー%0A・🐧カーネル:%0A　%20　${{ env.KERNEL_VERS }}%0Aーーーーーーーーーーーーーーーーー%0A・👤ソース名:%0A　%20　${{ env.SOURCE_CODE }}%0Aーーーーーーーーーーーーーーーーー%0A・🌲ソース元:%0A　%20　${{ secrets.PONLY2410_K66_REPO_TREE }}%0Aーーーーーーーーーーーーーーーーー%0A・🌿ブランチ:%0A　%20　${{ secrets.PONLY2410_K66_REPO_HEAD }}%0Aーーーーーーーーーーーーーーーーー%0A・📦ファイル:%0A　%20　${{ env.OUTPUT_FILE}}%0A＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝%0A"
 
