@@ -227,8 +227,8 @@ jobs:
         df -hT $PWD
         git clone $PONLY2410_K66_REPO_LINK -b $PONLY2410_K66_REPO_HEAD openwrt
         cd openwrt
-        ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_PATCHES }} && echo "✅ CMCC_XR30_EMMC_PONLY2410_K66_PATCHES applied successfully!" || { echo "❌ CMCC_XR30_EMMC_PONLY2410_K66_PATCHES failed!"; exit 1; }
-        ${{ secrets.ADD_EXTRA_SOURCE }} && echo "✅ ADD_EXTRA_SOURCE applied successfully!" || { echo "❌ ADD_EXTRA_SOURCE failed!"; exit 1; }
+        ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_PATCHES }}
+        ${{ secrets.ADD_EXTRA_SOURCE }}
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
 
         # Remove China Mirrors (中国国内ミラーの削除)
