@@ -241,7 +241,7 @@ jobs:
       uses: HiGarfield/cachewrtbuild@main
       with:
         ccache: true
-        mixkey: MT7981b-[${{ secrets.SOURCE_CODE }}]-[${{ secrets.PONLY2410_K66_REPO_TREE }}]-[${{ secrets.PONLY2410_K66_REPO_HEAD }}]-[${{ secrets.KERNEL_VERS }}]
+        mixkey: MT7981b-[${{ env.SOURCE_CODE }}]-[${{ secrets.PONLY2410_K66_REPO_TREE }}]-[${{ secrets.PONLY2410_K66_REPO_HEAD }}]-[${{ env.KERNEL_VERS }}]
         prefix: ${{ env.OPENWRT_PATH }}
 
     - name: Update & Install Feeds (フィードの更新とインストール)
@@ -423,7 +423,7 @@ jobs:
           }
 
           for (const [id, list] of Object.entries(workflowGroups)) {
-            list.sort((a, b) => b.id - a.id);.
+            list.sort((a, b) => b.id - a.id);
             let foundSuccess = false;
 
             for (const run of list) {
