@@ -274,8 +274,8 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-        openwrt/dl
-        !openwrt/dl/go-mod-cache
+          openwrt/dl
+          !openwrt/dl/go-mod-cache
         key: ${{ runner.os }}-openwrt-dl-${{ hashFiles('**/feeds.conf.default') }}-${{ hashFiles('**/Makefile') }}
         restore-keys: |
           ${{ runner.os }}-openwrt-dl-
