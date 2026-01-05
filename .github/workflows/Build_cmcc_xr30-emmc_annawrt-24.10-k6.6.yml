@@ -15,27 +15,27 @@ on:
   workflow_dispatch:
     inputs:
       restore_config:
-        description: 'Restore Configuration 🇯🇵 設定を復元'
+        description: 'Restore Configuration　🇯🇵 設定を復元'
         type: boolean
         default: false
       boost_wifi_5g:
-        description: 'Boost Wi-Fi 5G Signal 🇯🇵 5G信号の増幅'
+        description: 'Boost Wi-Fi 5G Signal　🇯🇵 5G信号の増幅'
         type: boolean
         default: false
       upload_firmware:
-        description: 'Upload to Artifacts   🇯🇵 Artifactに保存'
+        description: 'Upload to Artifacts　　🇯🇵 Artifactに保存'
         type: boolean
         default: false
       upload_release:
-        description: 'Upload to Releases    🇯🇵 Releaseに公開'
+        description: 'Upload to Releases　　 🇯🇵 Releaseに公開'
         type: boolean
         default: false
       telegram_notify:
-        description: 'Telegram Notification 🇯🇵 Telegram通知'
+        description: 'Telegram Notification　🇯🇵 Telegram通知'
         type: boolean
         default: true
       clean_ccache:
-        description: 'Clean all old CCACHE  🇯🇵 CCACHEに削除'
+        description: 'Clean all old CCACHE　 🇯🇵 CCACHEに削除'
         required: false
         type: boolean
         default: false
@@ -589,7 +589,7 @@ jobs:
       with:
         github-token: ${{ env.GH_TOKEN }}
         script: |
-          const keep_latest = 3;
+          const keep_latest = 2;
           const { owner, repo } = context.repo;
           const { data: releases } = await github.rest.repos.listReleases({ owner, repo, per_page: 100 });
           
