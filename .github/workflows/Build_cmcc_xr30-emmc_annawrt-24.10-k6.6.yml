@@ -226,7 +226,7 @@ jobs:
         sudo -E apt -yqq autoremove --purge
         sudo -E apt -yqq autoclean
         sudo -E apt -yqq clean
-        sudo -E apt -yqq install zip rename dos2unix libfuse-dev mold cargo
+        sudo -E apt -yqq install zip rename dos2unix libfuse-dev cargo
         sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
         rustup target add aarch64-unknown-linux-musl
         sudo -E systemctl daemon-reload
@@ -331,7 +331,7 @@ jobs:
       id: compile
       run: |
         echo -e "$(nproc) thread compile"
-        LDFLAGS="-fuse-ld=mold" make -j$(($(nproc) + 1)) || make -j1 V=s
+        make -j$(($(nproc) + 1)) || make -j1 V=s
         echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
 
     - name: Update Variables (変数の更新)
