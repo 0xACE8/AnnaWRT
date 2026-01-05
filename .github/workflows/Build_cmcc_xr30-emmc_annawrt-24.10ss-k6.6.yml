@@ -9,35 +9,31 @@
 # 説明: GitHub Actionsのモジュール化を活用し、プライバシーとセキュリティを確保したOpenWrtビルド。
 #
 
-name: Build cudy_tr3000-v1 128mb ponly 24.10 kernel 6.6 actions.
+name: Build cmcc_xr30-emmc annawrt 24.10ss kernel 6.6 addons actions.
 
 on:
   workflow_dispatch:
     inputs:
       restore_config:
-        description: 'Restore Configuration 🇯🇵 設定を復元'
+        description: 'Restore Configuration　🇯🇵 設定を復元'
         type: boolean
         default: false
       boost_wifi_5g:
-        description: 'Boost Wi-Fi 5G Signal 🇯🇵 5G信号の増幅'
+        description: 'Boost Wi-Fi 5G Signal　🇯🇵 5G信号の増幅'
         type: boolean
         default: false
       upload_firmware:
-        description: 'Upload to Artifacts　 🇯🇵 Artifactに保存'
+        description: 'Upload to Artifacts　　🇯🇵 Artifactに保存'
         type: boolean
         default: false
       upload_release:
-        description: 'Upload to Releases　　🇯🇵 Releaseに公開'
+        description: 'Upload to Releases　　 🇯🇵 Releaseに公開'
         type: boolean
         default: false
       telegram_notify:
-        description: 'Telegram Notification 🇯🇵 Telegram通知'
+        description: 'Telegram Notification　🇯🇵 Telegram通知'
         type: boolean
         default: true
-      upload_wenshushu:
-        description: 'Upload to WENSHUSHU　 🇯🇵 文叔叔に転送'
-        type: boolean
-        default: false
       clean_ccache:
         description: 'Clean all old CCACHE　 🇯🇵 CCACHEに削除'
         required: false
@@ -249,7 +245,7 @@ jobs:
       run: |
         git config --global url."https://$ACCESS_TOKEN@github.com/0xACE8/".insteadOf "https://github.com/0xACE8/"
         git config --global core.compression 0
- 
+
     - name: Mount Tmpfs
       run: |
           # 仅当内存大于 12GB 时执行，预留 4GB 给系统和编译进程，其余给 tmpfs
@@ -571,7 +567,6 @@ jobs:
         keep_minimum_runs: 1
         delete_workflow_pattern: Build_cmcc_xr30-emmc_annawrt-24.10ss-k6.6.yml
  
-
     - name: Delete Old Releases (古いリリースの削除)
       uses: actions/github-script@v7
       if: steps.organize.outcome == 'success' && (github.event.inputs.upload_release == 'true' || contains(github.event.action, 'upload_release')) && !cancelled()
