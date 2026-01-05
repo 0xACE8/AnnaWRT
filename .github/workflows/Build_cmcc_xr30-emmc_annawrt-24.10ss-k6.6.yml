@@ -246,9 +246,9 @@ jobs:
         git config --global url."https://$ACCESS_TOKEN@github.com/0xACE8/".insteadOf "https://github.com/0xACE8/"
         git config --global core.compression 0
 
-    - name: Mount Tmpfs
+    - name: Prepare and Mount Tmpfs
       run: |
-          # 仅当内存大于 12GB 时执行，预留 4GB 给系统和编译进程，其余给 tmpfs
+          mkdir -p ${{ github.workspace }}/openwrt
           sudo mount -t tmpfs -o size=12G tmpfs ${{ github.workspace }}/openwrt
 
     - name: Clone Source Code (ソースコードのクローン)
