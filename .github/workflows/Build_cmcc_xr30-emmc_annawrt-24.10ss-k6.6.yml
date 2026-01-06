@@ -9,7 +9,7 @@
 # 説明: GitHub Actionsのモジュール化を活用し、プライバシーとセキュリティを確保したOpenWrtビルド。
 #
 
-name: Build cmcc_xr30-emmc annawrt 24.10ss kernel 6.6 addons actions.
+name: Build cmcc_xr30-emmc annawrt 24.10ss kernel 6.6.95 actions.
 
 on:
   workflow_dispatch:
@@ -252,7 +252,6 @@ jobs:
         ./scripts/feeds update -a
         rm -rf feeds/packages/lang/golang
         git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
-        ./scripts/feeds install -a
         ./scripts/feeds install -a
 
     - name: Load Custom Configuration (カスタム設定の読み込み)
