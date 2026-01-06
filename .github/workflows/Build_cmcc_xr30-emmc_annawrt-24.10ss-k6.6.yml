@@ -9,7 +9,7 @@
 # 説明: GitHub Actionsのモジュール化を活用し、プライバシーとセキュリティを確保したOpenWrtビルド。
 #
 
-name: Build cmcc_xr30-emmc annawrt 24.10ss kernel 6.6 addons actions.
+name: Build cmcc_xr30-emmc annawrt 24.10ss kernel 6.6 actions.
 
 on:
   workflow_dispatch:
@@ -49,8 +49,8 @@ concurrency:
 env:
   # annawrt 2410
   PONLY2410_K66_REPO_LINK:              ${{ secrets.PONLY2410_K66_REPO_LINK }}
-  PONLY2410_K66_REPO_TREE:              ${{ secrets.PONLY2410_K66_REPO_TREE }}
-  PONLY2410_K66_REPO_HEAD:              ${{ secrets.PONLY2410_K66_REPO_HEAD }}
+  PONLY2410_K66_PONLY2410_K66_REPO_TREE:              ${{ secrets.PONLY2410_K66_PONLY2410_K66_REPO_TREE }}
+  PONLY2410_K66_PONLY2410_K66_REPO_HEAD:              ${{ secrets.PONLY2410_K66_PONLY2410_K66_REPO_HEAD }}
   PONLY2410_K66_REPO_DIFF:              ${{ secrets.PONLY2410_K66_REPO_DIFF }}
   # cmcc-xr30-emmc
   CMCC_XR30_EMMC_PONLY2410_K66_PATCHES: ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_PATCHES }}
@@ -66,7 +66,7 @@ env:
   ACCESS_REPACKAGE:                     ${{ secrets.ACCESS_REPACKAGE }}
   # luci & packages repo
   PLUGIN_REPO_SLUG:                     ${{ secrets.PLUGIN_REPO_SLUG }}
-  PLUGIN_REPO_HEAD:                     ${{ secrets.PLUGIN_REPO_HEAD }}
+  PLUGIN_PONLY2410_K66_REPO_HEAD:                     ${{ secrets.PLUGIN_PONLY2410_K66_REPO_HEAD }}
   PLUGIN_REPO_FLOW:                     ${{ secrets.PLUGIN_REPO_FLOW }}
   # cmcc color sytle for argon
   ARGON_THEME_CMCC:                     ${{ secrets.ARGON_THEME_CMCC }}
@@ -84,9 +84,9 @@ env:
   TARGET_CHIP:                          mt7981b
   TARGET_DISK:                          8GB_eMMC
   SOURCE_CODE:                          padavanonly
-  KERNEL_VERS:                          kernel_6.6
+  KERNEL_VERS:                          kernel_6.6.95
   OUTPUT_FILE:                          annawrt-24.10-k6.6-mt7981b-cmcc_xr30-emmc-sysupgrade
-  TZ: Asia/Tokyo
+  TZ: "Asia/Tokyo"
 
 jobs:
   build:
@@ -98,16 +98,12 @@ jobs:
     steps:
     - name: Sync and Wait for Plugin Repo (プラグインリポジトリの同期と待機)
       run: |
-        echo "🔍 Checking last successful sync time..."
-        
         LAST_RUN_TIME=$(gh run list --workflow "$PLUGIN_REPO_FLOW" --repo "$PLUGIN_REPO_SLUG" --status success --limit 1 --json updatedAt --jq '.[0].updatedAt')
         DO_SYNC="true"
-        
         if [ -n "$LAST_RUN_TIME" ] && [ "$LAST_RUN_TIME" != "null" ]; then
           LAST_TS=$(date -d "$LAST_RUN_TIME" +%s)
           NOW_TS=$(date +%s)
           DIFF=$((NOW_TS - LAST_TS))
-          
           if [ "$DIFF" -lt 86400 ]; then
             echo "⏭️ Last sync was only $((DIFF / 3600)) hours ago (Success at: $LAST_RUN_TIME). Skipping."
             DO_SYNC="false"
@@ -117,45 +113,35 @@ jobs:
         else
           echo "⚠️ No previous successful run found. Forcing sync."
         fi
-
         if [ "$DO_SYNC" == "true" ]; then
-          echo "🚀 Triggering workflow..."
-
-          if ! gh workflow run "$PLUGIN_REPO_FLOW" --repo "$PLUGIN_REPO_SLUG" --ref "$PLUGIN_REPO_HEAD"; then
+          echo "Triggering workflow..."
+          if ! gh workflow run "$PLUGIN_REPO_FLOW" --repo "$PLUGIN_REPO_SLUG" --ref "$PLUGIN_PONLY2410_K66_REPO_HEAD"; then
             echo "❌ Error: Failed to trigger the workflow."
             exit 1
           fi
-            
           echo "🕵️‍♂️ Waiting for Run ID..."
           echo "⏳ Max wait time: 10 minutes (60 attempts x 10s)"
-            
           FOUND_ID=""
-          
           for i in {1..60}; do
             echo "   Attempt $i/60: Checking for active runs..."
             sleep 10
-            
             RUN_ID=$(gh run list --workflow "$PLUGIN_REPO_FLOW" --repo "$PLUGIN_REPO_SLUG" --limit 1 --json databaseId,status --jq 'map(select(.status != "completed")) | .[0].databaseId')
-              
             if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
               FOUND_ID=$RUN_ID
               echo "✅ Caught the Run ID! Run ID: $FOUND_ID"
               break
             fi
           done
-            
           if [ -z "$FOUND_ID" ]; then
             echo "❌ Error: Timed out after 10 minutes waiting for Run ID"
             echo "   Possible reason: GitHub Actions queue is extremely busy."
             exit 1
           fi
-            
-          echo "👀 Waiting sync..."
-
+          echo "Waiting sync..."
           gh run watch "$FOUND_ID" --repo "$PLUGIN_REPO_SLUG" --exit-status
-          echo "🍽️ Plugin sync complete"
+          echo "Plugin sync complete"
         else
-          echo "😴 Skipping sync to save resources (Recently synced)."
+          echo "Skipping sync to save resources (Recently synced)."
         fi
 
     - name: Checkout (チェックアウト)
@@ -205,8 +191,8 @@ jobs:
         sudo -E apt -yqq autoremove --purge
         sudo -E apt -yqq autoclean
         sudo -E apt -yqq clean
+        sudo -E apt -yqq install zip rename dos2unix libfuse-dev libxcrypt-dev libncurses5-dev cargo
         sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-        sudo -E apt -yqq install zip rename dos2unix libfuse-dev cargo
         rustup target add aarch64-unknown-linux-musl
         sudo -E systemctl daemon-reload
         sudo timedatectl set-timezone "$TZ"
@@ -217,45 +203,21 @@ jobs:
         git config --global url."https://$ACCESS_TOKEN@github.com/0xACE8/".insteadOf "https://github.com/0xACE8/"
         git config --global core.compression 0
 
-    - name: Checkout and Prepare Hybrid Storage (手动初始化)
+    - name: Clone Source Code (ソースコードのクローン)
+      working-directory: ./
       run: |
-        # 1. 准备目录结构
-        mkdir -p ${{ github.workspace }}/openwrt
-        mkdir -p ${{ github.workspace }}/dl
-        mkdir -p ${{ github.workspace }}/.ccache
-        
-        # 2. 挂载 12G 内存盘
-        sudo mount -t tmpfs -o size=12G tmpfs ${{ github.workspace }}/openwrt
-        sudo chown $USER:$USER ${{ github.workspace }}/openwrt
-        
-        # 3. 【核心修正】进入挂载目录，手动“原地”拉取代码
-        # 这招绝对不会报 "destination path already exists"
-        cd ${{ github.workspace }}/openwrt
-        git init
-        git remote add origin $PONLY2410_K66_REPO_LINK
-        git fetch --depth 1 origin $PONLY2410_K66_REPO_HEAD
-        git checkout FETCH_HEAD
-        
+        df -hT $PWD
+        git clone --depth 1 $PONLY2410_K66_REPO_LINK -b $PONLY2410_K66_PONLY2410_K66_REPO_HEAD openwrt
+
         # Remove China Mirrors (中国国内ミラーの削除)
         PROJECT_MIRRORS_FILE="scripts/projectsmirrors.json"
           if [ -f "$PROJECT_MIRRORS_FILE" ]; then
             sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
           fi
-        
-        # 4. 建立软链接 (此时源码已在内存盘，且 .git 也在其中)
-        ln -sf ${{ github.workspace }}/dl ${{ github.workspace }}/openwrt/dl
-        ln -sf ${{ github.workspace }}/.ccache ${{ github.workspace }}/openwrt/.ccache
-        
-        # 5. 安全配置 (双保险)
-        git config --global --add safe.directory "*"
 
     - name: Prepare Cache Key (キャッシュキーの准备)
       run: |
-        # 1. 生成日期变量（用于每月/每日自动刷新）
         echo "CACHE_MONTH=$(date +%Y%m)" >> $GITHUB_ENV
-        
-        # 2. 处理手动清理逻辑
-        # 如果勾选了 clean_cache，就生成一个唯一的随机时间戳，强制让 mixkey 失效
         if [ "${{ github.event.inputs.clean_cache }}" = "true" ]; then
             echo "CLEAN_MARK=_clean_$(date +%s)" >> $GITHUB_ENV
         else
@@ -266,7 +228,7 @@ jobs:
       uses: HiGarfield/cachewrtbuild@main
       with:
         ccache: true
-        mixkey: MT7981b-[${{ env.CACHE_MONTH }}]-[${{ env.SOURCE_CODE }}]-[${{ secrets.PONLY2410_K66_REPO_TREE }}]-[${{ secrets.PONLY2410_K66_REPO_HEAD }}]-[${{ env.KERNEL_VERS }}]-[${{ env.CLEAN_MARK }}]
+        mixkey: MT7981b-[${{ env.CACHE_MONTH }}]-[${{ env.SOURCE_CODE }}]-[${{ secrets.PONLY2410_K66_PONLY2410_K66_REPO_TREE }}]-[${{ secrets.PONLY2410_K66_PONLY2410_K66_REPO_HEAD }}]-[${{ env.KERNEL_VERS }}]-[${{ env.CLEAN_MARK }}]
         prefix: ${{ github.workspace }}/openwrt
 
     - name: Cache dl Directory (dlディレクトリのキャッシュ)
@@ -328,24 +290,11 @@ jobs:
     - name: Compile Firmware (ファームウェアのコンパイル)
       working-directory: ./openwrt
       id: compile
-      continue-on-error: true
-      env:
-        CCACHE_DIR: ${{ github.workspace }}/.ccache
-        USE_CCACHE: 1
       run: |
         echo -e "$(nproc) thread compile"
-        ccache -z
         make -j$(nproc) || make -j1 V=s
-        ccache -s
         echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
-
-    - name: Update Variables (変数の更新)
-      run: |
         echo "OUTPUT_FILE=${OUTPUT_FILE}_${FILE_DATE}" >> $GITHUB_ENV
-
-    - name: Check Disk Usage (ディスク使用量の確認)
-      if: (!cancelled())
-      run: df -hT
 
     - name: Notify Compilation Error (コンパイルエラーの通知)
       if: steps.compile.outcome != 'success' && (github.event.inputs.telegram_notify == 'true' || contains(github.event.action, 'telegram_notify')) && !cancelled()
@@ -381,8 +330,8 @@ jobs:
         MSG="${MSG}%0A•💿容量仕様:%0A　%20　${TARGET_DISK}"
         MSG="${MSG}%0A•🐧カーネル:%0A　%20　${KERNEL_VERS}"
         MSG="${MSG}%0A•👤ソース名:%0A　%20　${SOURCE_CODE}"
-        MSG="${MSG}%0A•🌲ソース元:%0A　%20　${PONLY2410_K66_REPO_TREE}"
-        MSG="${MSG}%0A•🌿ブランチ:%0A　%20　${PONLY2410_K66_REPO_HEAD}"
+        MSG="${MSG}%0A•🌲ソース元:%0A　%20　${PONLY2410_K66_PONLY2410_K66_REPO_TREE}"
+        MSG="${MSG}%0A•🌿ブランチ:%0A　%20　${PONLY2410_K66_PONLY2410_K66_REPO_HEAD}"
 
         MSG="${MSG}%0A%0A＝＝＝＝＝  状 態 一 覧 ＝＝＝＝＝＝"
         MSG="${MSG}%0A•⚙️設定復元:　%20　${STAT_RESTORE}"
@@ -445,8 +394,8 @@ jobs:
           - 💿 容量仕様: ${env.TARGET_DISK}
           - 🐧 カーネル: ${env.KERNEL_VERS}
           - 👤 ソース名: ${env.SOURCE_CODE}
-          - 🌲 ソース元: ${env.REPO_TREE}
-          - 🌿 ブランチ: ${env.REPO_HEAD}
+          - 🌲 ソース元: ${env.PONLY2410_K66_REPO_TREE}
+          - 🌿 ブランチ: ${env.PONLY2410_K66_REPO_HEAD}
           - 🔗 管理ＩＰ: 192.168.***.1 または ${env.SOURCE_CODE}.lan
           - 🛡️ 初期パス: ********
           ### ⚠️ 免責事項 ⚠️
@@ -526,8 +475,8 @@ jobs:
         MSG="${MSG}%0A•💿容量仕様:%0A　%20　${TARGET_DISK}"
         MSG="${MSG}%0A•🐧カーネル:%0A　%20　${KERNEL_VERS}"
         MSG="${MSG}%0A•👤ソース名:%0A　%20　${SOURCE_CODE}"
-        MSG="${MSG}%0A•🌲ソース元:%0A　%20　${PONLY2410_K66_REPO_TREE}"
-        MSG="${MSG}%0A•🌿ブランチ:%0A　%20　${PONLY2410_K66_REPO_HEAD}"
+        MSG="${MSG}%0A•🌲ソース元:%0A　%20　${PONLY2410_K66_PONLY2410_K66_REPO_TREE}"
+        MSG="${MSG}%0A•🌿ブランチ:%0A　%20　${PONLY2410_K66_PONLY2410_K66_REPO_HEAD}"
 
         MSG="${MSG}%0A%0A＝＝＝＝＝  状 態 一 覧 ＝＝＝＝＝＝"
         MSG="${MSG}%0A•⚙️設定復元:　%20　${STAT_RESTORE}"
@@ -566,7 +515,7 @@ jobs:
           const { data: releases } = await github.rest.repos.listReleases({ owner, repo, per_page: 100 });
           
           for (const release of releases.slice(keep_latest)) {
-            console.log(`👋 Deleting Release: ${release.tag_name}`);
+            console.log(`Deleting Release: ${release.tag_name}`);
             await github.rest.repos.deleteRelease({ owner, repo, release_id: release.id });
             try {
               await github.rest.git.deleteRef({ owner, repo, ref: `tags/${release.tag_name}` });
