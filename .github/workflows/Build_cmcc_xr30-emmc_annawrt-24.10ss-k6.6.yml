@@ -9,7 +9,7 @@
 # 説明: GitHub Actionsのモジュール化を活用し、プライバシーとセキュリティを確保したOpenWrtビルド。
 #
 
-name: Build cmcc_xr30-emmc annawrt 24.10ss kernel 6.6 actions.
+name: Build cmcc_xr30-emmc annawrt 24.10ss kernel 6.6 addons actions.
 
 on:
   workflow_dispatch:
@@ -49,8 +49,8 @@ concurrency:
 env:
   # annawrt 2410
   PONLY2410_K66_REPO_LINK:              ${{ secrets.PONLY2410_K66_REPO_LINK }}
-  PONLY2410_K66_PONLY2410_K66_REPO_TREE:              ${{ secrets.PONLY2410_K66_PONLY2410_K66_REPO_TREE }}
-  PONLY2410_K66_PONLY2410_K66_REPO_HEAD:              ${{ secrets.PONLY2410_K66_PONLY2410_K66_REPO_HEAD }}
+  PONLY2410_K66_REPO_TREE:              ${{ secrets.PONLY2410_K66_REPO_TREE }}
+  PONLY2410_K66_REPO_HEAD:              ${{ secrets.PONLY2410_K66_REPO_HEAD }}
   PONLY2410_K66_REPO_DIFF:              ${{ secrets.PONLY2410_K66_REPO_DIFF }}
   # cmcc-xr30-emmc
   CMCC_XR30_EMMC_PONLY2410_K66_PATCHES: ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_PATCHES }}
@@ -66,7 +66,7 @@ env:
   ACCESS_REPACKAGE:                     ${{ secrets.ACCESS_REPACKAGE }}
   # luci & packages repo
   PLUGIN_REPO_SLUG:                     ${{ secrets.PLUGIN_REPO_SLUG }}
-  PLUGIN_PONLY2410_K66_REPO_HEAD:                     ${{ secrets.PLUGIN_PONLY2410_K66_REPO_HEAD }}
+  PLUGIN_REPO_HEAD:                     ${{ secrets.PLUGIN_REPO_HEAD }}
   PLUGIN_REPO_FLOW:                     ${{ secrets.PLUGIN_REPO_FLOW }}
   # cmcc color sytle for argon
   ARGON_THEME_CMCC:                     ${{ secrets.ARGON_THEME_CMCC }}
@@ -115,7 +115,7 @@ jobs:
         fi
         if [ "$DO_SYNC" == "true" ]; then
           echo "Triggering workflow..."
-          if ! gh workflow run "$PLUGIN_REPO_FLOW" --repo "$PLUGIN_REPO_SLUG" --ref "$PLUGIN_PONLY2410_K66_REPO_HEAD"; then
+          if ! gh workflow run "$PLUGIN_REPO_FLOW" --repo "$PLUGIN_REPO_SLUG" --ref "$PLUGIN_REPO_HEAD"; then
             echo "❌ Error: Failed to trigger the workflow."
             exit 1
           fi
@@ -191,7 +191,7 @@ jobs:
         sudo -E apt -yqq autoremove --purge
         sudo -E apt -yqq autoclean
         sudo -E apt -yqq clean
-        sudo -E apt -yqq install zip rename dos2unix libfuse-dev libxcrypt-dev libncurses5-dev cargo
+        sudo -E apt -yqq install zip rename dos2unix libfuse-dev python3-netifaces libxcrypt-dev libncurses5-dev cargo
         sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
         rustup target add aarch64-unknown-linux-musl
         sudo -E systemctl daemon-reload
@@ -207,7 +207,7 @@ jobs:
       working-directory: ./
       run: |
         df -hT $PWD
-        git clone --depth 1 $PONLY2410_K66_REPO_LINK -b $PONLY2410_K66_PONLY2410_K66_REPO_HEAD openwrt
+        git clone --depth 1 $PONLY2410_K66_REPO_LINK -b $PONLY2410_K66_REPO_HEAD openwrt
 
         # Remove China Mirrors (中国国内ミラーの削除)
         PROJECT_MIRRORS_FILE="scripts/projectsmirrors.json"
@@ -228,7 +228,7 @@ jobs:
       uses: HiGarfield/cachewrtbuild@main
       with:
         ccache: true
-        mixkey: MT7981b-[${{ env.CACHE_MONTH }}]-[${{ env.SOURCE_CODE }}]-[${{ secrets.PONLY2410_K66_PONLY2410_K66_REPO_TREE }}]-[${{ secrets.PONLY2410_K66_PONLY2410_K66_REPO_HEAD }}]-[${{ env.KERNEL_VERS }}]-[${{ env.CLEAN_MARK }}]
+        mixkey: MT7981b-[${{ env.CACHE_MONTH }}]-[${{ env.SOURCE_CODE }}]-[${{ secrets.PONLY2410_K66_REPO_TREE }}]-[${{ secrets.PONLY2410_K66_REPO_HEAD }}]-[${{ env.KERNEL_VERS }}]-[${{ env.CLEAN_MARK }}]
         prefix: ${{ github.workspace }}/openwrt
 
     - name: Cache dl Directory (dlディレクトリのキャッシュ)
@@ -330,8 +330,8 @@ jobs:
         MSG="${MSG}%0A•💿容量仕様:%0A　%20　${TARGET_DISK}"
         MSG="${MSG}%0A•🐧カーネル:%0A　%20　${KERNEL_VERS}"
         MSG="${MSG}%0A•👤ソース名:%0A　%20　${SOURCE_CODE}"
-        MSG="${MSG}%0A•🌲ソース元:%0A　%20　${PONLY2410_K66_PONLY2410_K66_REPO_TREE}"
-        MSG="${MSG}%0A•🌿ブランチ:%0A　%20　${PONLY2410_K66_PONLY2410_K66_REPO_HEAD}"
+        MSG="${MSG}%0A•🌲ソース元:%0A　%20　${PONLY2410_K66_REPO_TREE}"
+        MSG="${MSG}%0A•🌿ブランチ:%0A　%20　${PONLY2410_K66_REPO_HEAD}"
 
         MSG="${MSG}%0A%0A＝＝＝＝＝  状 態 一 覧 ＝＝＝＝＝＝"
         MSG="${MSG}%0A•⚙️設定復元:　%20　${STAT_RESTORE}"
@@ -475,8 +475,8 @@ jobs:
         MSG="${MSG}%0A•💿容量仕様:%0A　%20　${TARGET_DISK}"
         MSG="${MSG}%0A•🐧カーネル:%0A　%20　${KERNEL_VERS}"
         MSG="${MSG}%0A•👤ソース名:%0A　%20　${SOURCE_CODE}"
-        MSG="${MSG}%0A•🌲ソース元:%0A　%20　${PONLY2410_K66_PONLY2410_K66_REPO_TREE}"
-        MSG="${MSG}%0A•🌿ブランチ:%0A　%20　${PONLY2410_K66_PONLY2410_K66_REPO_HEAD}"
+        MSG="${MSG}%0A•🌲ソース元:%0A　%20　${PONLY2410_K66_REPO_TREE}"
+        MSG="${MSG}%0A•🌿ブランチ:%0A　%20　${PONLY2410_K66_REPO_HEAD}"
 
         MSG="${MSG}%0A%0A＝＝＝＝＝  状 態 一 覧 ＝＝＝＝＝＝"
         MSG="${MSG}%0A•⚙️設定復元:　%20　${STAT_RESTORE}"
