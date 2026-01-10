@@ -79,6 +79,12 @@ env:
   INPUT_ARTIFACT:                       ${{ github.event.inputs.upload_firmware }}
   INPUT_RELEASE:                        ${{ github.event.inputs.upload_release }}
   INPUT_CLEANCACHE:                     ${{ github.event.inputs.clean_ccache }}
+  # ccache
+  CCACHE_DIR:                           ${{ github.workspace }}/openwrt/.ccache
+  CCACHE_BASEDIR:                       ${{ github.workspace }}
+  CCACHE_COMPRESS:                      1
+  CCACHE_COMPRESSLEVEL:                 6
+  CCACHE_MAXSIZE:                       5G
   # hardware & repo info
   DEVICE_NAME:                          CMCC_XR30-eMMC
   TARGET_CHIP:                          mt7981b
@@ -215,6 +221,7 @@ jobs:
           if [ -f "$PROJECT_MIRRORS_FILE" ]; then
             sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
           fi
+        mkdir -p ${{ github.workspace }}/openwrt/.ccache
 
     - name: Prepare Cache Key (キャッシュキーの准备)
       run: |
@@ -271,16 +278,19 @@ jobs:
         ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_ARCHIVE }}
         echo "OUTPUT_FILE=annawrt-24.10-k6.6-mt7981b-cmcc_xr30-emmc-configured-sysupgrade" >> $GITHUB_ENV
 
-    - name: Optimization & CCache Configuration
-      working-directory: ./openwrt
+    - name: Check CCache Status
       run: |
-        echo "CONFIG_CCACHE_DIR=\"${{ github.workspace }}/.ccache\"" >> .config
-        export CCACHE_DIR=${{ github.workspace }}/.ccache
-        export CCACHE_BASEDIR=${{ github.workspace }}
-        export CCACHE_COMPRESS=1
-        export CCACHE_COMPRESSLEVEL=6
-        ccache -M 5G
-        ccache -z
+        export CCACHE_DIR=${{ github.workspace }}/openwrt/.ccache
+        ccache -s  # 显示缓存统计信息
+        echo "Actual CCache Path: $CCACHE_DIR"
+        ls -al $CCACHE_DIR || echo "Directory is still empty"
+
+#    - name: Optimization & CCache Configuration
+#      working-directory: ./openwrt
+#      run: |
+#        echo "CONFIG_CCACHE_DIR=\"${{ github.workspace }}/openwrt/.ccache\"" >> .config
+#        ccache -M 5G
+#        ccache -z
 
     - name: Download Packages (パッケージのダウンロード)
       if: steps.loadconfig.outcome == 'success' && !cancelled()
@@ -291,6 +301,13 @@ jobs:
         make download -j8
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
+
+    - name: Align OpenWrt CCache Config
+      working-directory: ./openwrt
+      run: |
+        echo "CONFIG_CCACHE_DIR=\"\$(TOPDIR)/.ccache\"" >> .config
+        grep "CONFIG_CCACHE" .config
+        grep "CONFIG_CCACHE_DIR" .config
 
     - name: Boost Wi-Fi 5G Signal (Wi-Fi 5G信号の増幅)
       if: github.event.inputs.boost_wifi_5g == 'true' && steps.loadconfig.outcome == 'success' &&  !cancelled()
@@ -309,6 +326,12 @@ jobs:
     - name: Update Variables (変数の更新)
       run: |
         echo "OUTPUT_FILE=${OUTPUT_FILE}_${FILE_DATE}" >> $GITHUB_ENV
+
+    - name: Verify CCache Settings
+      if: steps.compile.outcome != 'success' && (github.event.inputs.telegram_notify == 'true' || contains(github.event.action, 'telegram_notify')) && !cancelled()
+      run: |
+        ccache -p  # 打印当前 ccache 的所有配置参数
+        ccache -s  # 查看当前的缓存统计（命中次数、压缩率等）
 
     - name: Notify Compilation Error (コンパイルエラーの通知)
       if: steps.compile.outcome != 'success' && (github.event.inputs.telegram_notify == 'true' || contains(github.event.action, 'telegram_notify')) && !cancelled()
