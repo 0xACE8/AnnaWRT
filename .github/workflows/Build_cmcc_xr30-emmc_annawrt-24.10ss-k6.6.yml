@@ -279,8 +279,8 @@ jobs:
         echo "OUTPUT_FILE=annawrt-24.10-k6.6-mt7981b-cmcc_xr30-emmc-configured-sysupgrade" >> $GITHUB_ENV
 
     - name: Check CCache Status
+      working-directory: ./openwrt
       run: |
-        export CCACHE_DIR=${{ github.workspace }}/openwrt/.ccache
         ccache -s  # 显示缓存统计信息
         echo "Actual CCache Path: $CCACHE_DIR"
         ls -al $CCACHE_DIR || echo "Directory is still empty"
