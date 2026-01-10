@@ -328,7 +328,7 @@ jobs:
         echo "OUTPUT_FILE=${OUTPUT_FILE}_${FILE_DATE}" >> $GITHUB_ENV
 
     - name: Verify CCache Settings
-      if: steps.compile.outcome != 'success' && (github.event.inputs.telegram_notify == 'true' || contains(github.event.action, 'telegram_notify')) && !cancelled()
+      if: steps.compile.outcome == 'success' && !cancelled()
       run: |
         ccache -p  # 打印当前 ccache 的所有配置参数
         ccache -s  # 查看当前的缓存统计（命中次数、压缩率等）
