@@ -293,7 +293,7 @@ jobs:
       run: |
         get_stat() { [ "$1" == "true" ] && echo "✅" || echo "⏺️"; }
         
-        [ "${{ steps.compile.outcome }}" == "success" ] && BUILD_STAT="✅成功" || BUILD_STAT="❌失败"
+        [ "${{ steps.compile.outcome }}" == "success" ] && BUILD_STAT="✅ビルドが正常に完了しました！✅" || BUILD_STAT="❌ ビルドが失敗しました！ ❌"
         
         STAT_LIST="•⚙️配置复元: $(get_stat "${{ github.event.inputs.restore_config }}")%0A"
         STAT_LIST="${STAT_LIST}•🛜信号增幅: $(get_stat "${{ github.event.inputs.boost_wifi_5g }}")%0A"
@@ -301,7 +301,7 @@ jobs:
         STAT_LIST="${STAT_LIST}•🚀公开配信: $(get_stat "${{ github.event.inputs.upload_release }}")%0A"
         STAT_LIST="${STAT_LIST}•🧹缓存清理: $(get_stat "${{ github.event.inputs.clean_ccache }}")"
 
-        MSG="✅ビルドが正常に完了しました！✅"
+        MSG="${BUILD_STAT}"
         MSG="${MSG}%0A＝＝＝＝＝  基 本 情 報 ＝＝＝＝＝＝"
         MSG="${MSG}%0A•🖥️対応機種:%0A　%20　${DEVICE_NAME}"
         MSG="${MSG}%0A•💿容量仕様:%0A　%20　${TARGET_DISK}"
@@ -310,7 +310,7 @@ jobs:
         MSG="${MSG}%0A•🌲ソース元:%0A　%20　${PONLY2410_K66_REPO_TREE}"
         MSG="${MSG}%0A•🌿ブランチ:%0A　%20　${PONLY2410_K66_REPO_HEAD}"
 
-        MSG="${MSG}＝＝＝＝＝ 状 態 一 覧 ＝＝＝＝＝＝%0A${STAT_LIST}%0A"
+        MSG="${MSG}%0A＝＝＝＝＝ 状 態 一 覧 ＝＝＝＝＝＝%0A${STAT_LIST}%0A"
         MSG="${MSG}＝＝＝＝＝ 結 果 情 報 ＝＝＝＝＝＝%0A"
         
         if [ "${{ steps.compile.outcome }}" == "success" ]; then
