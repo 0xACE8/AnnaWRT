@@ -9,7 +9,7 @@
 # 説明: GitHub Actionsのモジュール化を活用し、プライバシーとセキュリティを確保したOpenWrtビルド。
 #
 
-name: Build cmcc_xr30-emmc annawrt 24.10 kernel 6.6 actions.
+name: Build cmcc_xr30-emmc annawrt 24.10 kernel 6.6.95 actions.
 
 on:
   workflow_dispatch:
@@ -207,7 +207,7 @@ jobs:
         ${{ secrets.ARGON_THEME_CMCC }}
 
         # Restore Config Archive (設定アーカイブの復元)
-        [[ "$INPUT_RESTORE" == "true" ]] && ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_ARCHIVE }} && echo "OUTPUT_FILE=annawrt-24.10-k6.6-mt7981b-cmcc_xr30-emmc-configured-sysupgrade" >> $GITHUB_ENV
+        [[ "$INPUT_RESTORE" == "true" ]] && echo "OUTPUT_FILE=annawrt-24.10-k6.6-mt7981b-cmcc_xr30-emmc-configured-sysupgrade" >> $GITHUB_ENV && ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_ARCHIVE }} 
 
         # Boost Wi-Fi 5G Signal (Wi-Fi 5G信号の増幅)
         [[ "$INPUT_BOOST5G" == "true" ]] && ${{ secrets.BOOST_5G_TO_25DBM }}
