@@ -271,7 +271,7 @@ jobs:
 
     - name: Upload to Release (Releaseに公開)
       if: steps.compile.outcome == 'success' && env.INPUT_RELEASE == 'true'
-      uses: softprops/action-gh-release@main
+      uses: softprops/action-gh-release@v2
       with:
         token: ${{ secrets.ACCESS_TOKEN }}
         tag_name: ${{ env.FILE_DATE }}
@@ -328,7 +328,7 @@ jobs:
           -d text="$(echo "$MSG" | sed 's/ /%20/g')"
 
     - name: Delete Old Workflows (古いワークフローの削除)
-      uses: Mattraks/delete-workflow-runs@v2.5.0
+      uses: Mattraks/delete-workflow-runs@main
       with:
         token: ${{ secrets.ACCESS_TOKEN }}
         repository: ${{ github.repository }}
