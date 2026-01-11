@@ -184,11 +184,14 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-openwrt-dl-v3-
 
+    - name: Surgical Clean Go Cache (Goキャッシュの物理削除)
+      run: |
+        rm -rf openwrt/dl/go-mod-cache
+        mkdir -p openwrt/dl/go-mod-cache
+
     - name: Update & Install Feeds (フィードの更新とインストール)
       working-directory: ./openwrt
       run: |
-        # Surgical Clean Go Cache (Goキャッシュの物理削除)
-        rm -rf openwrt/dl/go-mod-cache && mkdir -p openwrt/dl/go-mod-cache
         ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_PATCHES }}
         ${{ secrets.ADD_EXTRA_SOURCE }}
         ./scripts/feeds update -a
@@ -271,7 +274,7 @@ jobs:
 
     - name: Upload to Release (Releaseに公開)
       if: steps.compile.outcome == 'success' && env.INPUT_RELEASE == 'true'
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@main
       with:
         token: ${{ secrets.ACCESS_TOKEN }}
         tag_name: ${{ env.FILE_DATE }}
@@ -314,16 +317,15 @@ jobs:
         MSG="${MSG}%0A•🌲ソース元:%0A　%20　${PONLY2410_K66_REPO_TREE}"
         MSG="${MSG}%0A•🌿ブランチ:%0A　%20　${PONLY2410_K66_REPO_HEAD}"
 
-        MSG="${MSG}%0A＝＝＝＝＝ 状 態 一 覧 ＝＝＝＝＝＝%0A${STAT_LIST}%0A"
+        MSG="${MSG}＝＝＝＝＝ 状 態 一 覧 ＝＝＝＝＝＝%0A${STAT_LIST}%0A"
         MSG="${MSG}＝＝＝＝＝ 結 果 情 報 ＝＝＝＝＝＝%0A"
         
         if [ "${{ steps.compile.outcome }}" == "success" ]; then
-          MSG="${MSG}•📦📦ファイル:%0A　%20　${OUTPUT_FILE}"
+          MSG="${MSG}•📦文件: ${OUTPUT_FILE}"
         else
           MSG="${MSG}•❌失敗時刻: $(date +'%Y-%m-%d %H:%M')"
         fi
-        MSG="${MSG}%0A＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝"
-        
+
         curl -s -o /dev/null -X GET "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_KEY }}/sendMessage" \
           -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
           -d text="$(echo "$MSG" | sed 's/ /%20/g')"
