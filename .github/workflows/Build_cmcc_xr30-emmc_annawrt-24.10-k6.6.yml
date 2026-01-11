@@ -161,7 +161,7 @@ jobs:
         df -hT $PWD
         git clone --depth 1 $PONLY2410_K66_REPO_LINK -b $PONLY2410_K66_REPO_HEAD openwrt
         # Remove China Mirrors (中国国内ミラーの削除)
-        [ -f "scripts/projectsmirrors.json" ] && sed -i '/.cn\//d; /tencent/d; /aliyun/d' scripts/projectsmirrors.json
+        [ -f "scripts/projectsmirrors.json" ] && sed -i '/.cn\//d; /tencent/d; /aliyun/d' scripts/projectsmirrors.json && rm -rf files
         # Prepare Cache Key (キャッシュキーの准备)
         mkdir -p ${{ github.workspace }}/openwrt/.ccache
         echo "CACHE_MONTH=$(date +%Y%m)" >> $GITHUB_ENV
@@ -188,29 +188,34 @@ jobs:
       working-directory: ./openwrt
       run: |
         # Surgical Clean Go Cache (Goキャッシュの物理削除)
-        rm -rf openwrt/dl/go-mod-cache
-        mkdir -p openwrt/dl/go-mod-cache
+        rm -rf openwrt/dl/go-mod-cache && mkdir -p openwrt/dl/go-mod-cache
         ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_PATCHES }}
         ${{ secrets.ADD_EXTRA_SOURCE }}
         ./scripts/feeds update -a
-        rm -rf feeds/packages/lang/golang
-        git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
+        rm -rf feeds/packages/lang/golang && git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
         ./scripts/feeds install -a
+
+        # Boost Wi-Fi 5G Signal (Wi-Fi 5G信号の増幅)
+        [[ "$INPUT_BOOST5G" == "true" ]] && {
+        ${{ secrets.BOOST_5G_TO_25DBM }}
+        }
 
     - name: Load Custom Configuration (カスタム設定の読み込み)
       working-directory: ./openwrt
       id: loadconfig
       run: |
+        set +x
+        cat <<'EOF' > .config
         ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_PROFILE }}
-        rm -rf files
+        EOF
+        set -x
         ${{ secrets.PONLY2410_K66_REPO_DIFF }}
         ${{ secrets.ARGON_THEME_CMCC }}
 
         # Restore Config Archive (設定アーカイブの復元)
-        [[ "$INPUT_RESTORE" == "true" ]] && echo "OUTPUT_FILE=annawrt-24.10-k6.6-mt7981b-cmcc_xr30-emmc-configured-sysupgrade" >> $GITHUB_ENV && ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_ARCHIVE }} 
-
-        # Boost Wi-Fi 5G Signal (Wi-Fi 5G信号の増幅)
-        [[ "$INPUT_BOOST5G" == "true" ]] && ${{ secrets.BOOST_5G_TO_25DBM }}
+        [[ "$INPUT_RESTORE" == "true" ]] && {
+        ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_ARCHIVE }} 
+        } && echo "OUTPUT_FILE=annawrt-24.10-k6.6-mt7981b-cmcc_xr30-emmc-configured-sysupgrade" >> $GITHUB_ENV
 
         # Check CCache Status
         ccache -s
