@@ -256,7 +256,7 @@ jobs:
         cd openwrt/bin/targets/*/*
         FIRMWARE_FILE=$(ls *sysupgrade.* 2>/dev/null | head -n 1)
         EXT="${FIRMWARE_FILE##*.}"
-        ls | grep -v "$FIRMWARE_FILE" | xargs rm -rdf
+        ls -A | grep -v "$FIRMWARE_FILE" | xargs rm -rdf
         mv "$FIRMWARE_FILE" "${{ env.OUTPUT_FILE }}.$EXT"
         sha512sums ${{ secrets.ACCESS_SHA512SUM }} sha512sums "${{ env.OUTPUT_FILE }}.$EXT"
         ${{ secrets.ACCESS_REPACKAGE }} "${{ env.OUTPUT_FILE }}.$EXT"
@@ -271,11 +271,12 @@ jobs:
 
     - name: Upload to Release (Releaseに公開)
       if: steps.compile.outcome == 'success' && env.INPUT_RELEASE == 'true'
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@main
       with:
+        token: ${{ secrets.ACCESS_TOKEN }}
         tag_name: ${{ env.FILE_DATE }}
         name: ${{ env.TARGET_CHIP }}_${{ env.DEVICE_NAME }}_${{ env.TARGET_DISK }}_${{ env.KERNEL_VERS }}_${{ env.FILE_DATE }}
-        files: ${{ env.FIRMWARE_PATH }}/*
+        files: ${{ env.FIRMWARE }}/*
         body: |
           **本ファームウェアは、CPU「${{ env.TARGET_CHIP }}」搭載のモデル「${{ env.DEVICE_NAME }}」✅ ${{ env.TARGET_DISK }} ✅専用です。**
           ### 📒「${{ env.SOURCE_CODE }}」のソースコードを基にビルドされました。
