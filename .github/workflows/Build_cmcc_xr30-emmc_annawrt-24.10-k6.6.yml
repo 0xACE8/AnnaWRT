@@ -195,10 +195,11 @@ jobs:
         rm -rf feeds/packages/lang/golang && git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
         ./scripts/feeds install -a
 
-        # Boost Wi-Fi 5G Signal (Wi-Fi 5G信号の増幅)
-        [[ "$INPUT_BOOST5G" == "true" ]] && {
+    - name: Boost Wi-Fi 5G Signal
+      if: env.INPUT_BOOST5G == 'true'
+      working-directory: ./openwrt
+      run: |
         ${{ secrets.BOOST_5G_TO_25DBM }}
-        }
 
     - name: Load Custom Configuration (カスタム設定の読み込み)
       working-directory: ./openwrt
@@ -212,13 +213,15 @@ jobs:
         ${{ secrets.PONLY2410_K66_REPO_DIFF }}
         ${{ secrets.ARGON_THEME_CMCC }}
 
-        # Restore Config Archive (設定アーカイブの復元)
-        [[ "$INPUT_RESTORE" == "true" ]] && {
-        ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_ARCHIVE }} 
-        } && echo "OUTPUT_FILE=annawrt-24.10-k6.6-mt7981b-cmcc_xr30-emmc-configured-sysupgrade" >> $GITHUB_ENV
-
         # Check CCache Status
         ccache -s
+
+    - name: Restore Config Archive (設定アーカイブの復元)
+      if: steps.loadconfig.outcome == 'success' && env.INPUT_RESTORE == 'true'
+      working-directory: ./openwrt
+      run: |
+        ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_ARCHIVE }}
+        echo "OUTPUT_FILE=annawrt-24.10-k6.6-mt7981b-cmcc_xr30-emmc-configured-sysupgrade" >> $GITHUB_ENV
 
     - name: Download Packages (パッケージのダウンロード)
       if: steps.loadconfig.outcome == 'success' && !cancelled()
@@ -310,7 +313,7 @@ jobs:
         MSG="${MSG}%0A•🌲ソース元:%0A　%20　${PONLY2410_K66_REPO_TREE}"
         MSG="${MSG}%0A•🌿ブランチ:%0A　%20　${PONLY2410_K66_REPO_HEAD}"
 
-        MSG="${MSG}%0A＝＝＝＝＝ 状 態 一 覧 ＝＝＝＝＝＝%0A${STAT_LIST}%0A"
+        MSG="${MSG}＝＝＝＝＝ 状 態 一 覧 ＝＝＝＝＝＝%0A${STAT_LIST}%0A"
         MSG="${MSG}＝＝＝＝＝ 結 果 情 報 ＝＝＝＝＝＝%0A"
         
         if [ "${{ steps.compile.outcome }}" == "success" ]; then
