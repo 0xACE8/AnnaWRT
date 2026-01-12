@@ -99,7 +99,8 @@ jobs:
 
     steps:
     - name: Start Timer
-      run: echo "START_TIME=$SECONDS" >> $GITHUB_ENV
+      run: |
+        echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
 
     - name: Sync and Wait for Plugin Repo (プラグインリポジトリの同期と待機)
       run: |
@@ -312,16 +313,12 @@ jobs:
     - name: Calculate Duration
       if: always() && env.INPUT_NOTIFY == 'true' && env.IS_KEEPALIVE != 'true'
       run: |
-        END_TIME=$SECONDS
+        END_TIME=$(date +%s)
         START_TIME=${{ env.START_TIME }}
         TOTAL_SECONDS=$((END_TIME - START_TIME))
-        
-        # 格式化时间为 HH:MM:SS
         H=$((TOTAL_SECONDS / 3600))
         M=$(((TOTAL_SECONDS % 3600) / 60))
         S=$((TOTAL_SECONDS % 60))
-        
-        # 存入环境变量供 TG 使用
         echo "DURATION=$(printf "%02d:%02d:%02d" $H $M $S)" >> $GITHUB_ENV
 
     - name: Final Report & TG Notify (総合ステータス通知)
@@ -331,7 +328,7 @@ jobs:
         
         [ "${{ steps.compile.outcome }}" == "success" ] && BUILD_STAT="✅ビルドが正常に完了しました！✅" || BUILD_STAT="❌ ビルドが失敗しました！ ❌"
         
-        STAT_LIST="•⚙️配置复元: $(get_stat "${{ github.event.inputs.restore_config }}")%0A"
+        STAT_LIST="•⚙️配置复元:　%20　$(get_stat "${{ github.event.inputs.restore_config }}")%0A"
         STAT_LIST="${STAT_LIST}•🛜信号增幅:　%20　$(get_stat "${{ github.event.inputs.boost_wifi_5g }}")%0A"
         STAT_LIST="${STAT_LIST}•💾构建成果:　%20　$(get_stat "${{ github.event.inputs.upload_firmware }}")%0A"
         STAT_LIST="${STAT_LIST}•🚀公开配信:　%20　$(get_stat "${{ github.event.inputs.upload_release }}")%0A"
@@ -351,7 +348,7 @@ jobs:
         
         if [ "${{ steps.compile.outcome }}" == "success" ]; then
           MSG="${MSG}•📦ファイル:%0A　%20　${OUTPUT_FILE}"
-          MSG="${MSG}%0A•⏱️実行時間:　${{ env.DURATION }}
+          MSG="${MSG}%0A•⏱️実行時間:　${{ env.DURATION }}"
         else
           MSG="${MSG}•❌失敗時刻:　$(date +'%Y-%m-%d %H:%M')"
         fi
