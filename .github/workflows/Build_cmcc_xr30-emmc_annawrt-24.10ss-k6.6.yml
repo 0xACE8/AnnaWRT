@@ -23,29 +23,30 @@ on:
         type: boolean
         default: false
       upload_firmware:
-        description: 'Upload to Artifacts... 🇯🇵 Artifactに保存'
+        description: 'Upload FW to Artifact. 🇯🇵 Artifactに保存'
         type: boolean
         default: false
       upload_release:
-        description: 'Upload to Releases.... 🇯🇵 Releaseに公開'
+        description: 'Upload FW to Release.. 🇯🇵 Releaseに公開'
         type: boolean
         default: false
       telegram_notify:
         description: 'Telegram Notification. 🇯🇵 Telegram通知'
         type: boolean
         default: true
-      clean_ccache:
-        description: 'Clean all old CCACHE.. 🇯🇵 CCACHEに削除'
+      keepalive_cache:
+        description: 'Manual Cache Keepalive 🇯🇵 保活モード'
+        type: boolean
+        default: false
+      clean_cache:
+        description: 'Clean all old CACHE... 🇯🇵 CACHEを削除'
         required: false
         type: boolean
         default: false
   schedule:
-    - cron: '0 19 * * 0'
+    - cron: '0 2 * * 0'     # 每周日 02:00 运行 (保持缓存活跃，防止被 GitHub 删除)
+    - cron: '0 0 1 * *'     # 每月 1 号 00:00 运行 (由于 Key 包含月份，会自动生成全新缓存)
     
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 env:
   # annawrt 2410
   PONLY2410_K66_REPO_LINK:              ${{ secrets.PONLY2410_K66_REPO_LINK }}
@@ -59,7 +60,6 @@ env:
   # token
   GITHUB_TOKEN:                         ${{ secrets.ACCESS_TOKEN }}
   ACCESS_TOKEN:                         ${{ secrets.ACCESS_TOKEN }}
-  DEBIAN_FRONTEND:                      noninteractive
   # feeds source & check sha512sum
   ADD_EXTRA_SOURCE:                     ${{ secrets.ADD_EXTRA_SOURCE }}
   ACCESS_SHA512SUM:                     ${{ secrets.ACCESS_SHA512SUM }}
@@ -80,6 +80,7 @@ env:
   INPUT_RELEASE:                        ${{ github.event.inputs.upload_release }}
   INPUT_NOTIFY:                         ${{ github.event.inputs.telegram_notify }}
   INPUT_CLEANCACHE:                     ${{ github.event.inputs.clean_ccache }}
+  IS_KEEPALIVE:                         ${{ github.event_name == 'schedule' || github.event.inputs.keepalive_cache == 'true' }}
   # hardware & repo info
   DEVICE_NAME:                          CMCC_XR30-eMMC
   TARGET_CHIP:                          mt7981b
@@ -97,6 +98,9 @@ jobs:
       contents: write
 
     steps:
+    - name: Start Timer
+      run: echo "START_TIME=$SECONDS" >> $GITHUB_ENV
+
     - name: Sync and Wait for Plugin Repo (プラグインリポジトリの同期と待機)
       run: |
         LAST_TS=$(date -d $(gh run list -w "$PLUGIN_REPO_FLOW" -R "$PLUGIN_REPO_SLUG" -s success --limit 1 --json updatedAt -q '.[0].updatedAt // "1970-01-01"') +%s)
@@ -145,6 +149,8 @@ jobs:
         echo "ディスク容量: $(ls /dev/sd* | grep -v [1-9] | wc -l)" && df -hT
 
     - name: Initialize Environment (環境の初期化)
+      env:
+        DEBIAN_FRONTEND: noninteractive
       run: |
         sudo -E apt -yqq update
         sudo -E apt -yqq install zip rename dos2unix libfuse-dev python3-netifaces libcrypt-dev libncurses5-dev cargo
@@ -198,7 +204,7 @@ jobs:
         rm -rf feeds/packages/lang/golang && git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
         ./scripts/feeds install -a
 
-    - name: Boost Wi-Fi 5G Signal
+    - name: Boost Wi-Fi 5G Signal (Wi-Fi 5G信号の増幅)
       if: env.INPUT_BOOST5G == 'true'
       working-directory: ./openwrt
       run: |
@@ -236,7 +242,15 @@ jobs:
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
 
+    - name: Keepalive Cache Refresh (キャッシュ更新のマーク付け)
+      if: env.IS_KEEPALIVE == 'true'
+      run: |
+        mkdir -p openwrt/.ccache
+        date > openwrt/.ccache/keepalive_timestamp
+        echo "✅ Cache flagged for refresh. Heavy build skipped."
+
     - name: Compile Firmware (ファームウェアのコンパイル)
+      if: env.IS_KEEPALIVE != 'true'
       working-directory: ./openwrt
       id: compile
       run: |
@@ -253,8 +267,8 @@ jobs:
         ccache -s
 
     - name: Organize Files (ファイルの整理)
+      if: steps.compile.outcome == 'success'
       id: organize
-      if: steps.compile.outcome == 'success' && !cancelled()
       run: |
         cd openwrt/bin/targets/*/*
         FIRMWARE_FILE=$(ls *sysupgrade.* 2>/dev/null | head -n 1)
@@ -295,8 +309,23 @@ jobs:
           - ‼️ **本ファームウェアは、個人利用を目的とした非公式のカスタマイズ版です。**
           - ⛔️ **強制フラッシュ等でデバイスが破損した場合、本リポジトリは一切の責任を負いません。自己責任で使用してください。**
 
+    - name: Calculate Duration
+      if: always() && env.INPUT_NOTIFY == 'true' && env.IS_KEEPALIVE != 'true'
+      run: |
+        END_TIME=$SECONDS
+        START_TIME=${{ env.START_TIME }}
+        TOTAL_SECONDS=$((END_TIME - START_TIME))
+        
+        # 格式化时间为 HH:MM:SS
+        H=$((TOTAL_SECONDS / 3600))
+        M=$(((TOTAL_SECONDS % 3600) / 60))
+        S=$((TOTAL_SECONDS % 60))
+        
+        # 存入环境变量供 TG 使用
+        echo "DURATION=$(printf "%02d:%02d:%02d" $H $M $S)" >> $GITHUB_ENV
+
     - name: Final Report & TG Notify (総合ステータス通知)
-      if: always() && env.INPUT_NOTIFY == 'true'
+      if: always() && env.INPUT_NOTIFY == 'true' && env.IS_KEEPALIVE != 'true'
       run: |
         get_stat() { [ "$1" == "true" ] && echo "✅" || echo "⏺️"; }
         
@@ -321,9 +350,10 @@ jobs:
         MSG="${MSG}＝＝＝＝＝ 結 果 情 報 ＝＝＝＝＝＝%0A"
         
         if [ "${{ steps.compile.outcome }}" == "success" ]; then
-          MSG="${MSG}•📦ファイル:　%20　${OUTPUT_FILE}"
+          MSG="${MSG}•📦ファイル:%0A　%20　${OUTPUT_FILE}"
+          MSG="${MSG}%0A•⏱️実行時間:　${{ env.DURATION }}
         else
-          MSG="${MSG}•❌失敗時刻: $(date +'%Y-%m-%d %H:%M')"
+          MSG="${MSG}•❌失敗時刻:　$(date +'%Y-%m-%d %H:%M')"
         fi
 
         MSG="${MSG}%0A＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝"
