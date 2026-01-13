@@ -140,13 +140,16 @@ jobs:
         )
 
         for KEY in "${KEYWORDS[@]}"; do
-          gh cache list -R ${{ github.repository }} --limit 100 | grep "$KEY" | cut -f 1 | while read -r cache_key; do
-            if [ -n "$cache_key" ]; then
-              gh cache delete "$cache_key" -R ${{ github.repository }} || true
+          gh cache list -R ${{ github.repository }} --limit 100 | grep -F "$KEY" | cut -f 1 | while read -r cache_id; do
+            if [ -n "$cache_id" ]; then
+              gh cache delete "$cache_id" -R ${{ github.repository }} || true
             fi
           done
         done
-        echo "🗑️ クリーンアップ完了！新しいキャッシュのためのスペースが確保されました。"
+        
+        echo "✨ クリーンアップ完了！"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Free Disk Space (ディスク空き容量の確保)
       uses: easimon/maximize-build-space@master
