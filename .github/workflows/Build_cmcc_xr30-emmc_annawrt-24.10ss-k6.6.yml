@@ -341,16 +341,16 @@ jobs:
         MSG="${MSG}%0A•🐧カーネル:%0A　%20　${KERNEL_VERS}"
         MSG="${MSG}%0A•👤ソース名:%0A　%20　${SOURCE_CODE}"
         MSG="${MSG}%0A•🌲ソース元:%0A　%20　${PONLY2410_K66_REPO_TREE}"
-        MSG="${MSG}%0A•🌿ブランチ:%0A　%20　${PONLY2410_K66_REPO_HEAD}"
+        MSG="${MSG}%0A•🌿ブランチ:%0A　%20　${PONLY2410_K66_REPO_HEAD}%0A"
 
-        MSG="${MSG}%0A＝＝＝＝＝ 状 態 一 覧 ＝＝＝＝＝＝%0A${STAT_LIST}%0A"
+        MSG="${MSG}%0A＝＝＝＝＝ 状 態 一 覧 ＝＝＝＝＝＝%0A${STAT_LIST}%0A%0A"
         MSG="${MSG}＝＝＝＝＝ 結 果 情 報 ＝＝＝＝＝＝%0A"
         
         if [ "${{ steps.compile.outcome }}" == "success" ]; then
           MSG="${MSG}•📦ファイル:%0A　%20　${OUTPUT_FILE}"
           MSG="${MSG}%0A•⏱️実行時間:　${{ env.DURATION }}"
         else
-          MSG="${MSG}•❌失敗時刻:　$(date +'%Y-%m-%d %H:%M')"
+          MSG="${MSG}•❌失敗時刻:　%20　$(date +'%Y-%m-%d %H:%M')%0A"
         fi
 
         MSG="${MSG}%0A＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝"
@@ -370,9 +370,17 @@ jobs:
  
     - name: Delete Old Releases (古いリリースの削除)
       if: steps.compile.outcome == 'success' && env.INPUT_RELEASE == 'true'
-      uses: dev-drprasad/delete-older-releases@master
-      with:
-        keep_latest: 2
-        delete_tags: true
-        delete_tag_pattern: "${{ env.TARGET_CHIP }}_${{ env.DEVICE_NAME }}_${{ env.TARGET_DISK }}_${{ env.KERNEL_VERS }}" 
+      shell: bash
+      run: |
+        QUERY="${{ env.TARGET_CHIP }}_${{ env.DEVICE_NAME }}_${{ env.TARGET_DISK }}_${{ env.KERNEL_VERS }}"
+        OLD_TAGS=$(gh release list --limit 100 | grep "$QUERY" | awk 'NR > 2 {print $1}')
+
+        if [ -z "$OLD_TAGS" ]; then
+          echo "✅ 余分な旧バージョンは見つかりませんでした。クリーンアップは不要です。"
+        else
+          for TAG in $OLD_TAGS; do
+            echo "🗑️ 旧バージョンを削除しています: $TAG"
+            gh release delete "$TAG" --yes --cleanup-tag
+          done
+        fi
 
