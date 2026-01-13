@@ -94,10 +94,8 @@ jobs:
   build:
     runs-on: ubuntu-22.04
 
-    permissions:
-      contents: write
-      actions: write
-
+    permissions: write-all
+     
     steps:
     - name: Start Timer (計測開始)
       run: |
@@ -137,14 +135,12 @@ jobs:
       shell: bash
       run: |
         KEYS=("${{ runner.os }}-openwrt-dl-v3-" "MT7981b-[${{ env.CACHE_MONTH }}]")
-
         for KEY in "${KEYS[@]}"; do
           CACHES=$(gh cache list -R ${{ github.repository }} --limit 100 --json key -q ".[].key" 2>/dev/null | grep -F "$KEY" || true)
           for cache_key in $CACHES; do
             gh cache delete "$cache_key" -R ${{ github.repository }} || true
           done
         done
-
         echo "✨ すべてのクリーンアップ処理が完了しました！"
 
     - name: Free Disk Space (ディスク空き容量の確保)
