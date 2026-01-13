@@ -234,9 +234,6 @@ jobs:
         ${{ secrets.PONLY2410_K66_REPO_DIFF }}
         ${{ secrets.ARGON_THEME_CMCC }}
 
-        # Check CCACHE Status (CCACHEステータスの確認)
-        cache -s
-
     - name: Restore Config Archive (設定アーカイブの復元)
       if: steps.loadconfig.outcome == 'success' && env.INPUT_RESTORE == 'true'
       working-directory: ./openwrt
@@ -275,8 +272,6 @@ jobs:
       run: |
         # Update Variables (変数の更新)
         echo "OUTPUT_FILE=${OUTPUT_FILE}_${FILE_DATE}" >> $GITHUB_ENV
-        cache -p
-        cache -s
 
     - name: Organize Files (ファイルの整理)
       if: steps.compile.outcome == 'success'
