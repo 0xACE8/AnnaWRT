@@ -78,7 +78,7 @@ env:
   INPUT_ARTIFACT:                       ${{ github.event.inputs.upload_firmware }}
   INPUT_RELEASE:                        ${{ github.event.inputs.upload_release }}
   INPUT_NOTIFY:                         ${{ github.event.inputs.telegram_notify }}
-  INPUT_CLEANCACHE:                     ${{ github.event.inputs.clean_ccache }}
+  INPUT_CLEANCACHE:                     ${{ github.event.inputs.clean_cache }}
   IS_KEEPALIVE:                         ${{ github.event_name == 'schedule' || github.event.inputs.keepalive_cache == 'true' }}
   # hardware & repo info
   DEVICE_NAME:                          CMCC_XR30-eMMC
@@ -127,14 +127,10 @@ jobs:
       uses: actions/checkout@main
       with:
         fetch-depth: 0
-        
-    - name: Test Logic
-      if: true || false
-      run: echo "这行绝对会输出，因为只要有一个是 true 就行"
-      
+
     - name: Clean Up All Old Caches (全ての旧キャッシュを削除)
       if: |
-        github.event.inputs.clean_ccache == 'true' || 
+        github.event.inputs.clean_cache == 'true' || 
         github.event.schedule == '0 0 1 * *'
       shell: bash
       run: |
