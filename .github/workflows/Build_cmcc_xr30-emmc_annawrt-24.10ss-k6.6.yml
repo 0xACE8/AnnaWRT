@@ -134,24 +134,26 @@ jobs:
         github.event.schedule == '0 0 1 * *'
       shell: bash
       run: |
-        KEY1="${{ runner.os }}-openwrt-dl-v3-"
-        KEY2="MT7981b-[${{ env.CACHE_MONTH }}]"
-        for KEY in "$KEY1" "$KEY2"; do
-          CACHELIST=$(gh cache list -R ${{ github.repository }} --limit 100 2>/dev/null || true)
+        KEYWORDS=("${{ runner.os }}-openwrt-dl-v3-" "MT7981b-[${{ env.CACHE_MONTH }}]")
+
+        for KEY in "${KEYWORDS[@]}"; do
+          echo "🔍 🇯🇵 検索中: $KEY"
           
-          if [ -n "$CACHELIST" ]; then
-            CACHES=$(echo "$CACHELIST" | grep -F "$KEY" | awk '{print $1}')
-           
+          # 使用 JSON 格式获取所有缓存，这种方式在找不到缓存时不会报错
+          # 通过 jq 过滤出包含关键字的 Key
+          CACHES=$(gh cache list -R ${{ github.repository }} --limit 100 --json key -q ".[].key" | grep -F "$KEY" || true)
+
+          if [ -n "$CACHES" ]; then
             for cache_key in $CACHES; do
-              if [ -n "$cache_key" ]; then
-                gh cache delete "$cache_key" -R ${{ github.repository }} || true
-              fi
+              echo "🗑️ 🇯🇵 削除中: $cache_key"
+              gh cache delete "$cache_key" -R ${{ github.repository }} || true
             done
           else
-            echo "ℹ️ キャッシュが見つかりませんでした。スキップします。"
+            echo "✅ 🇯🇵 削除対象のキャッシュは見つかりませんでした。"
           fi
         done
-        echo "✨ クリーンアップ完了！"
+        
+        echo "✨ 🇯🇵 すべてのクリーンアップ処理が完了しました！"
 
     - name: Free Disk Space (ディスク空き容量の確保)
       uses: easimon/maximize-build-space@master
