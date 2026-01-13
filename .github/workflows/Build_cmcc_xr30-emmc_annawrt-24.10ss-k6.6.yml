@@ -95,7 +95,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     permissions: write-all
-     
+
     steps:
     - name: Start Timer (計測開始)
       run: |
@@ -135,12 +135,14 @@ jobs:
       shell: bash
       run: |
         KEYS=("${{ runner.os }}-openwrt-dl-v3-" "MT7981b-[${{ env.CACHE_MONTH }}]")
+
         for KEY in "${KEYS[@]}"; do
           CACHES=$(gh cache list -R ${{ github.repository }} --limit 100 --json key -q ".[].key" 2>/dev/null | grep -F "$KEY" || true)
           for cache_key in $CACHES; do
             gh cache delete "$cache_key" -R ${{ github.repository }} || true
           done
         done
+
         echo "✨ すべてのクリーンアップ処理が完了しました！"
 
     - name: Free Disk Space (ディスク空き容量の確保)
@@ -182,12 +184,9 @@ jobs:
       run: |
         df -hT $PWD
         git clone --depth 1 $PONLY2410_K66_REPO_LINK -b $PONLY2410_K66_REPO_HEAD openwrt
-        ls
-        echo "1"
-        ls openwrt
-        echo "2"
         # Remove China Mirrors (中国国内ミラーの削除)
-        [ -f "scripts/projectsmirrors.json" ] && sed -i '/.cn\//d; /tencent/d; /aliyun/d' scripts/projectsmirrors.json && rm -rf files
+        [ -f "openwrt/scripts/projectsmirrors.json" ] && sed -i '/.cn\//d; /tencent/d; /aliyun/d' openwrt/scripts/projectsmirrors.json
+        [ -d "openwrt/files" ] && rm -rf openwrt/files
 
     - name: Cache Toolchain (ツールチェーンのキャッシュ)
       uses: stupidloud/cachewrtbuild@main
@@ -210,7 +209,7 @@ jobs:
       working-directory: ./openwrt
       run: |
         # Surgical Clean Go Cache (Goキャッシュの物理削除)
-        rm -rf dl/go-mod-cache && mkdir -p dl/go-mod-cache
+        [ -d "dl/go-mod-cache" ] && rm -rf dl/go-mod-cache && mkdir -p dl/go-mod-cache
         ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_PATCHES }}
         ${{ secrets.ADD_EXTRA_SOURCE }}
         ./scripts/feeds update -a
