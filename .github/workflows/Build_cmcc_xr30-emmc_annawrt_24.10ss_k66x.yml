@@ -221,8 +221,8 @@ jobs:
       working-directory: ./openwrt
       run: |
         # Surgical Clean Go Cache (Goキャッシュの物理削除)
-        find openwrt/dl -size 0 -exec rm -f {} +
-        rm -rf openwrt/dl/go-mod-* 2>/dev/null || true
+        find dl -size 0 -exec rm -f {} +
+        rm -rf dl/go-mod-* 2>/dev/null || true
         ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_PATCHES }}
         ./scripts/feeds update -a
         rm -rf feeds/packages/lang/golang && git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
