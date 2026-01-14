@@ -190,16 +190,11 @@ jobs:
         [ -d "files" ] && rm -rf files
         # Add annawrt-packages Repo To Feeds ()
         ${{ secrets.ADD_EXTRA_SOURCE }}
-        # Load Custom Configuration (カスタム設定の読み込み)
-        set +x
-        cat <<'EOF' > .config
-        ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_PROFILE }}
-        EOF
 
     - name: Initialize Cache Hash (キャッシュハッシュの初期化)
       working-directory: ./openwrt
       run: |
-        SHORT_HASH=$(md5sum .config feeds.conf.default | md5sum | cut -c1-7)
+        SHORT_HASH=$(md5sum feeds.conf.default | md5sum | cut -c1-7)
         echo "CACHE_HASH=${SHORT_HASH}" >> $GITHUB_ENV
         echo "✅ キャッシュハッシュの生成完了: ${SHORT_HASH}"
 
@@ -227,14 +222,23 @@ jobs:
         ./scripts/feeds update -a
         rm -rf feeds/packages/lang/golang && git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
         ./scripts/feeds install -a
-        ${{ secrets.PONLY2410_K66_REPO_DIFF }}
-        ${{ secrets.ARGON_THEME_CMCC }}
 
     - name: Boost Wi-Fi 5G Signal (Wi-Fi 5G信号の増幅)
       if: env.INPUT_BOOST5G == 'true'
       working-directory: ./openwrt
       run: |
         ${{ secrets.BOOST_5G_TO_25DBM }}
+
+    - name: Load Custom Configuration (カスタム設定の読み込み)
+      working-directory: ./openwrt
+      id: loadconfig
+      run: |
+        set +x
+        cat <<'EOF' > .config
+        ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_PROFILE }}
+        EOF
+        ${{ secrets.PONLY2410_K66_REPO_DIFF }}
+        ${{ secrets.ARGON_THEME_CMCC }}
 
     - name: Update Cache (キャッシュの更新)
       if: steps.cache-toolchain.outputs.cache-hit == 'true' || steps.cache-toolchain.outputs.cache-matched-key != ''
