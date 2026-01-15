@@ -387,7 +387,7 @@ jobs:
         repository: ${{ github.repository }}
         retain_days: 0
         keep_minimum_runs: 1
-        delete_workflow_pattern: Build_cmcc_xr30-emmc_annawrt-24.10ss-k6.6.yml
+        delete_workflow_pattern: Build_cmcc_xr30-emmc_annawrt_24.10ss_k66x.yml
  
     - name: Delete Old Releases (古いリリースの削除)
       if: steps.compile.outcome == 'success' && env.INPUT_RELEASE == 'true'
