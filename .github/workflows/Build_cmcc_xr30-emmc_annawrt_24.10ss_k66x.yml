@@ -281,6 +281,11 @@ jobs:
       if: env.IS_KEEPALIVE != 'true'
       working-directory: ./openwrt
       id: compile
+      env:
+        CARGO_PROFILE_RELEASE_OPT_LEVEL: "3"
+        CARGO_PROFILE_RELEASE_LTO: "fat"
+        CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "1"
+        RUSTFLAGS: "-C target-cpu=cortex-a53 -C target-feature=+crypto,+crc,+neon"
       run: |
         echo -e "$(nproc) thread compile"
         make -j$(nproc) || make -j1 V=s
