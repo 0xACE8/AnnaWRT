@@ -283,7 +283,7 @@ jobs:
       id: compile
       env:
         CARGO_PROFILE_RELEASE_OPT_LEVEL: "3"
-        CARGO_PROFILE_RELEASE_LTO: "fat"
+        CARGO_PROFILE_RELEASE_LTO: "true"
         CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "1"
         RUSTFLAGS: "-C target-cpu=cortex-a53 -C target-feature=+crypto,+crc,+neon"
       run: |
@@ -291,12 +291,15 @@ jobs:
         make -j$(nproc) || make -j1 V=s
         echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
 
+    - name: Update Variables (変数の更新)
+      if: steps.compile.outcome == 'success'
+      run: |
+        echo "OUTPUT_FILE=${OUTPUT_FILE}_${FILE_DATE}" >> $GITHUB_ENV
+
     - name: Organize Files (ファイルの整理)
       if: steps.compile.outcome == 'success'
       id: organize
       run: |
-        # Update Variables (変数の更新)
-        echo "OUTPUT_FILE=${OUTPUT_FILE}_${FILE_DATE}" >> $GITHUB_ENV
         cd openwrt/bin/targets/*/*
         FIRMWARE_FILE=$(ls *sysupgrade.* 2>/dev/null | head -n 1)
         EXT="${FIRMWARE_FILE##*.}"
@@ -371,12 +374,12 @@ jobs:
 
         MSG="${MSG}%0A＝＝＝＝＝ 状 態 一 覧 ＝＝＝＝＝＝%0A${STAT_LIST}%0A"
         MSG="${MSG}＝＝＝＝＝ 結 果 情 報 ＝＝＝＝＝＝%0A"
+        MSG="${MSG}•⏱️%20実行時間:　%20　%20　${{ env.DURATION }}%0A"
         
         if [ "${{ steps.compile.outcome }}" == "success" ]; then
           MSG="${MSG}•📦%20ファイル:%0A　%20　%20　${OUTPUT_FILE}%0A"
-          MSG="${MSG}%0A•⏱️%20実行時間:　%20　%20　${{ env.DURATION }}%0A"
         else
-          MSG="${MSG}•❌%20失敗時刻:　%20　$(date +'%Y-%m-%d %H:%M')%0A"
+          MSG="${MSG}•❌%20失敗時刻:　%20　%20　$(date +'%Y-%m-%d %H:%M')%0A"
         fi
 
         MSG="${MSG}%0A＝＝＝ ＝＝＝ ＝＝＝ ＝＝＝ ＝＝＝ "
