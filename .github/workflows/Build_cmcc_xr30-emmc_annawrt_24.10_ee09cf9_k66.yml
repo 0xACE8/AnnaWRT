@@ -54,9 +54,9 @@ env:
   REPO_ANNA2410_K66_HEAD:               ${{ secrets.REPO_ANNA2410_K66_HEAD }}
   REPO_ANNA2410_K66_DIFF:               ${{ secrets.REPO_ANNA2410_K66_DIFF }}
   # cmcc_xr30-emmc
-  CMCC_XR30_EMMC_PONLY2410_K66_PATCHES: ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_PATCHES }}
-  CMCC_XR30_EMMC_PONLY2410_K66_PROFILE: ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_PROFILE }}
-  CMCC_XR30_EMMC_PONLY2410_K66_ARCHIVE: ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_ARCHIVE }}
+  CMCC_XR30_EMMC_ANNA2410_K66_PATCHES:  ${{ secrets.CMCC_XR30_EMMC_ANNA2410_K66_PATCHES }}
+  CMCC_XR30_EMMC_ANNA2410_K66_PROFILE:  ${{ secrets.CMCC_XR30_EMMC_ANNA2410_K66_PROFILE }}
+  CMCC_XR30_EMMC_ANNA2410_K66_ARCHIVE:  ${{ secrets.CMCC_XR30_EMMC_ANNA2410_K66_ARCHIVE }}
   # token
   GITHUB_TOKEN:                         ${{ secrets.ACCESS_TOKEN }}
   ACCESS_TOKEN:                         ${{ secrets.ACCESS_TOKEN }}
@@ -218,7 +218,7 @@ jobs:
         # Surgical Clean Go Cache (Goキャッシュの物理削除)
         find dl -size 0 -exec rm -f {} +
         rm -rf dl/go-mod-* 2>/dev/null || true
-        ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_PATCHES }}
+        ${{ secrets.CMCC_XR30_EMMC_ANNA2410_K66_PATCHES }}
         ./scripts/feeds update -a
         rm -rf feeds/packages/lang/golang && git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
         ./scripts/feeds install -a
@@ -235,7 +235,7 @@ jobs:
       run: |
         set +x
         cat <<'EOF' > .config
-        ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_PROFILE }}
+        ${{ secrets.CMCC_XR30_EMMC_ANNA2410_K66_PROFILE }}
         EOF
         ${{ secrets.REPO_ANNA2410_K66_DIFF }}
         ${{ secrets.ARGON_THEME_CMCC }}
@@ -256,7 +256,7 @@ jobs:
       if: steps.loadconfig.outcome == 'success' && env.INPUT_RESTORE == 'true'
       working-directory: ./openwrt
       run: |
-        ${{ secrets.CMCC_XR30_EMMC_PONLY2410_K66_ARCHIVE }}
+        ${{ secrets.CMCC_XR30_EMMC_ANNA2410_K66_ARCHIVE }}
         echo "OUTPUT_FILE=annawrt-24.10-ee09cf9-k6.6-mt7981b-cmcc_xr30-emmc-configured-sysupgrade" >> $GITHUB_ENV
 
     - name: Download Packages (パッケージのダウンロード)
